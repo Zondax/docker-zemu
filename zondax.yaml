@@ -1,0 +1,4 @@
+projectName: docker-zemu
+templates:
+  - template: templates/publish-earthly
+
