@@ -48,8 +48,9 @@ RUN python -c "import tomllib; print('\\n'.join(tomllib.load(open('speculos/pypr
   pip install --user -r /tmp/speculos-requirements.txt && \
   rm /tmp/speculos-requirements.txt
 
-# Patch proxy to connect to all interfaces
-RUN sed -i "s/HOST = '127.0.0.1'/HOST = '0.0.0.0'/g" speculos/tools/ledger-live-http-proxy.py
+# Patch proxy to connect to all interfaces (fail the build if upstream changes the line again)
+RUN sed -i -E "s/^HOST = ['\"]127\.0\.0\.1['\"]/HOST = \"0.0.0.0\"/" speculos/tools/ledger-live-http-proxy.py && \
+  grep -q '^HOST = "0.0.0.0"' speculos/tools/ledger-live-http-proxy.py
 
 # Open TCP ports
 # gdb
