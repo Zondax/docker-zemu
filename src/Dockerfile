@@ -14,7 +14,7 @@
 #   limitations under the License.
 #*******************************************************************************
 
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV LANG C.UTF-8
@@ -27,7 +27,8 @@ RUN apt-get update && \
     gdb-multiarch binutils-arm-none-eabi && \
     apt-get clean && rm -rf /var/lib/apt/lists/
 
-RUN pip3 install ledgerblue construct flake8 flask flask_restful jsonschema mnemonic pycrypto pyelftools pbkdf2 pytest Pillow requests
+# Speculos runtime deps are installed from its pyproject.toml below
+RUN pip3 install ledgerblue flake8 pbkdf2 pytest
 
 # Create zondax user
 RUN adduser --disabled-password --gecos "" -u 1000 zondax
@@ -41,8 +42,11 @@ RUN git clone https://github.com/LedgerHQ/speculos --depth 1
 RUN cd speculos && cmake -Bbuild -H. -DWITH_VNC=1
 RUN make -C speculos/build
 
-RUN pip install --upgrade pip pipenv
-RUN cd speculos && python -m pipenv install --deploy --system
+# Zemu runs speculos.py from the source tree, so only install the deps declared in pyproject.toml
+# (`pip install .` would rebuild the launcher a second time)
+RUN python -c "import tomllib; print('\\n'.join(tomllib.load(open('speculos/pyproject.toml', 'rb'))['project']['dependencies']))" > /tmp/speculos-requirements.txt && \
+  pip install --user -r /tmp/speculos-requirements.txt && \
+  rm /tmp/speculos-requirements.txt
 
 # Patch proxy to connect to all interfaces
 RUN sed -i "s/HOST = '127.0.0.1'/HOST = '0.0.0.0'/g" speculos/tools/ledger-live-http-proxy.py
